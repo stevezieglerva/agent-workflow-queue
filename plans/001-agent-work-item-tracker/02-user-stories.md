@@ -3,11 +3,11 @@
 ## US-001 — Agent Authenticates and Reads Work
 **As a** coding agent or personal AI assistant
 **I want** to authenticate through the Cognito OAuth 2.0 `client_credentials` flow and read project work items
-**So that** I can operate headlessly from an ECS container without browser automation or human login
+**So that** automated tests and future agent containers can operate without browser automation or human login
 
 **Priority:** P0
 **Acceptance Criteria:**
-- An ECS agent can obtain a short-lived Cognito access token using runtime credentials from AWS Secrets Manager.
+- The real dev E2E test runner can obtain a short-lived Cognito access token through `client_credentials` using `.env.test` or CI secret storage.
 - A token with the `agent:read` scope can list projects and read a project board through the REST API.
 - An expired or invalid token receives HTTP `401`.
 - A valid token without the required scope receives HTTP `403`.
@@ -80,11 +80,11 @@
 ## US-007 — Human Provisions Agent Access
 **As a** project owner
 **I want** to manage the Cognito app client and agent secret lifecycle
-**So that** ECS agents can authenticate without exposing credentials in container images
+**So that** automated tests and future ECS agents can authenticate without interactive login
 
 **Priority:** P1
 **Acceptance Criteria:**
 - The deployment creates or documents the Cognito resource server scopes and client-credentials app client.
-- The client secret is stored in AWS Secrets Manager and is not present in the repository or built image.
-- The ECS task role can read only the required secret.
-- Rotating or revoking the client secret prevents future token acquisition without changing the container image.
+- The dev test client secret is loaded from `.env.test` or CI secret storage and is not committed to the repository.
+- Rotating or revoking the client secret prevents future token acquisition without changing the test code.
+- Post-MVP ECS deployment stores the same credential in AWS Secrets Manager and reads it through the ECS task role.
