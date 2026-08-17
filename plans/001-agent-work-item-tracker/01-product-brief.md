@@ -13,10 +13,10 @@ The tracker provides a GitHub-Projects-like board that remains available indepen
 ## Scope — In
 - Multiple personal projects, with approximately ten projects and ten items per project as the initial operating target.
 - A shared six-column workflow: Todo, Elaborate, Ready For Agent, In Progress, Reviewing, and Done.
-- Work items with a sequential project-local number, title, description, status, optional priority, labels, assignee/agent, optional external source reference, optional PR URL, timestamps, comments, and dependency links.
+- Work items with a Jira-style project key plus sequential number such as `AFT-134`, title, description, status, optional priority, labels, assignee/agent, optional external source reference, optional PR URL, timestamps, comments, and dependency links.
 - REST API operations for create, read, list, filter, claim, update, move, comment, link a PR, close/reopen, and delete where appropriate.
 - Cognito-authenticated web access for the owner.
-- Headless agent access through revocable personal API tokens associated with the owner’s Cognito account.
+- Headless ECS agent access through Cognito OAuth 2.0 `client_credentials`, with client secrets retrieved from AWS Secrets Manager at runtime.
 - A live board website with project switching, drag-and-drop movement, item creation/editing, filtering, item detail, and activity history.
 - Serverless-first hosting and persistence with a target cost of a few dollars per month or less.
 
