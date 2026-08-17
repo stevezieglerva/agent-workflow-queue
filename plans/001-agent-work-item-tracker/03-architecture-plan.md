@@ -9,6 +9,7 @@
 - Reuse the existing Slack 2nd Brain Cognito User Pool and Google identity provider, but create a new app client and callback/logout URLs for this tracker.
 - Use separate DynamoDB tables because this is a small personal system where obvious table boundaries are easier to maintain than a single-table design.
 - Use three-second conditional polling for live updates. The browser updates without manual refresh and uses `ETag`/`If-None-Match` or an equivalent `updated_since` cursor to avoid rewriting unchanged board data.
+- Use one versioned REST API for both callers. The frontend and ECS agents share endpoint semantics; they differ only in token type, scope enforcement, CORS behavior, and frontend-only optimistic rendering.
 
 ## Components
 
@@ -94,6 +95,7 @@ Base path: `/v1`
 - **Frontend:** Amplify Hosting, using the existing Slack 2nd Brain Cognito User Pool and Google IdP with a tracker-specific app client.
 - **Custom domain:** `app.agent-queue.nerdthoughts.net` for the website. The API uses its API Gateway URL in v1 and is supplied to Amplify as an environment variable; a custom `api.` hostname can be added later.
 - **Agent runtime:** Existing ECS tasks; the tracker does not run an always-on ECS service.
+- **Container-auth boundary:** ECS client-credentials authentication is required for external coding-agent containers, not for hosting the tracker. The tracker itself remains serverless.
 - **Live updates:** Browser polls the board endpoint every three seconds with a conditional request.
 
 ## Non-functional Notes
