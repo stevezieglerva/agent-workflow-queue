@@ -9,7 +9,7 @@
 - Reuse the existing Slack 2nd Brain Cognito User Pool and Google identity provider, but create a new app client and callback/logout URLs for this tracker.
 - Use separate DynamoDB tables because this is a small personal system where obvious table boundaries are easier to maintain than a single-table design.
 - Use three-second conditional polling for live updates. The browser updates without manual refresh and uses `ETag`/`If-None-Match` or an equivalent `updated_since` cursor to avoid rewriting unchanged board data.
-- Use one versioned REST API for all callers. The frontend, real dev E2E runner, and future ECS agents share endpoint semantics; they differ only in credential source, scope enforcement, CORS behavior, and frontend-only optimistic rendering.
+- Use one versioned REST API for all callers. The frontend, real dev E2E runner, and future agent clients share endpoint semantics; they differ only in credential source, scope enforcement, CORS behavior, and frontend-only optimistic rendering.
 
 ## Components
 
@@ -17,15 +17,15 @@
 |---|---|---|---|---|
 | Amplify Web App | Serves the authenticated board UI, project switcher, filters, item detail, and optimistic drag/drop | React + TypeScript, Amplify Hosting | Cognito session, REST responses | HTML/JS/CSS, REST requests |
 | Cognito User Pool | Authenticates the owner through the existing Google identity provider and issues web JWTs | Managed AWS service | Google login, web OAuth requests | ID/access tokens |
-| Cognito M2M App Client | Issues short-lived access tokens for dev E2E tests now and future ECS agents using `client_credentials` | Managed AWS service | Client ID and secret, requested scopes | `agent:read` / `agent:write` access tokens |
+| Cognito Agent Client | Issues short-lived access tokens for dev E2E tests now and future agent clients using `client_credentials` | Managed AWS service | Client ID and secret, requested scopes | `agent:read` / `agent:write` access tokens |
 | API Gateway HTTP API | Public REST edge, CORS, throttling, JWT validation, and routing | Managed AWS service | HTTPS requests with Cognito JWT | Lambda invocations, HTTP responses |
 | Work Item Lambda | Implements REST use cases, authorization scopes, optimistic concurrency, idempotency, and table joins | Python 3.14 | API Gateway event, Cognito claims | JSON responses and DynamoDB writes |
 | Projects Table | Stores project identity, Jira-style key, metadata, and issue-number counter | DynamoDB on-demand | Project CRUD commands | Project records |
 | Work Items Table | Stores work items, status, metadata, version, and stable project relationship | DynamoDB on-demand | Item CRUD and transition commands | Item records and board query results |
 | Activity Table | Stores append-only comments and system activity events | DynamoDB on-demand | Item event commands | Activity history |
 | Idempotency Table | Prevents duplicate creates and repeated mutation side effects | DynamoDB on-demand with TTL | Client ID, idempotency key, request hash | Original response/resource reference |
-| Secrets Manager | Stores the Cognito M2M app client secret for post-MVP ECS agents | Managed AWS service | ECS task-role read | Runtime secret value |
-| Headless Test/Agent Client | Obtains Cognito tokens and calls the REST API without browser login; ECS is a post-MVP runtime | Python test runner or future container | Test secret/config, Cognito token, work instructions | REST mutations and reads |
+| Agent Secret Store | Stores the Cognito agent-client secret for post-MVP deployed agents | Managed AWS service | Runtime identity read | Runtime secret value |
+| Headless Test/Agent Client | Obtains Cognito tokens and calls the REST API without browser login | Python test runner or future agent runtime | Test secret/config, Cognito token, work instructions | REST mutations and reads |
 | CloudWatch Logs | Captures structured application and access logs without token values | Managed AWS service | Lambda/API logs | Debugging and operational history |
 | SAM Stack | Defines and deploys Lambda, API Gateway, DynamoDB, IAM, and configuration | AWS SAM/CloudFormation | Template and parameter files | AWS resources per environment |
 | Route 53 + Amplify Domain | Routes the application hostname to Amplify Hosting and manages certificate validation | Managed AWS services | DNS records | `app.agent-queue.nerdthoughts.net` |
@@ -93,18 +93,18 @@ Base path: `/v1`
 - **Persistence:** Four DynamoDB on-demand tables with TTL on idempotency records.
 - **Frontend:** Amplify Hosting, using the existing Slack 2nd Brain Cognito User Pool and Google IdP with a tracker-specific app client.
 - **Custom domain:** `app.agent-queue.nerdthoughts.net` for the website. The API uses its API Gateway URL in v1 and is supplied to Amplify as an environment variable; a custom `api.` hostname can be added later.
-- **Agent runtime:** Real dev E2E tests and local headless clients in MVP; existing ECS tasks can reuse the same flow after MVP. The tracker does not run an always-on ECS service.
-- **Container-auth boundary:** The `client_credentials` flow is included now for automated testing and future machine clients. ECS-specific secret delivery is post-MVP; the tracker itself remains serverless.
+- **Agent runtime:** Real dev E2E tests and local headless clients in MVP; future agent runtimes can reuse the same flow after MVP. The tracker does not run an always-on agent service.
+- **Agent credential boundary:** The `client_credentials` flow is included now for automated testing and future machine clients. Deployed-agent secret delivery is post-MVP; the tracker itself remains serverless.
 - **Live updates:** Browser polls the board endpoint every three seconds with a conditional request.
 
 ## Non-functional Notes
 
 - **Auth:** Cognito handles web owner login and machine `client_credentials` access tokens. HTTP API validates JWTs; Lambda enforces `agent:read` and `agent:write` scopes.
-- **Secrets:** Dev E2E credentials come from `.env.test` or CI secret storage and are never committed. Post-MVP ECS credentials move to Secrets Manager/task-role retrieval. No secret is baked into images, source, Amplify frontend code, or logs.
+- **Secrets:** Dev E2E credentials come from `.env.test` or CI secret storage and are never committed. Post-MVP deployed-agent credentials move to Secrets Manager/runtime-identity retrieval. No secret is baked into images, source, Amplify frontend code, or logs.
 - **Persistence:** DynamoDB on-demand; immutable project keys and issue numbers; soft deletion preserves number history.
 - **Concurrency:** DynamoDB conditional writes on `version`, claim state, and issue counter. Conflicts return HTTP `409`.
 - **Idempotency:** `Idempotency-Key` plus request hash prevents duplicate creates and repeated side effects; records expire with DynamoDB TTL.
 - **Availability:** No GitHub dependency for board reads or writes. AWS-managed services provide the runtime availability target.
-- **Cost:** HTTP API, Lambda, DynamoDB on-demand, Amplify Hosting, and Cognito are pay-per-use. ECS runtime cost is external to the tracker and will dominate if agents run continuously.
+- **Cost:** HTTP API, Lambda, DynamoDB on-demand, Amplify Hosting, and Cognito are pay-per-use. Future agent runtime cost is external to the tracker.
 - **Observability:** Structured CloudWatch logs with request ID, endpoint, principal type, project key, and public item ID; never log bearer tokens or client secrets.
 - **CORS:** Allow only the Amplify production domain and explicitly configured localhost development origin.

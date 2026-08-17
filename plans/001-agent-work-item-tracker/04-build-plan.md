@@ -4,9 +4,9 @@
 
 - The repository contains `sam/` for AWS SAM infrastructure and Python Lambda code, `frontend/` for the React/TypeScript Amplify app, and `deploy.sh` for local deployment.
 - End-to-end Behave tests live under `sam/tests/e2e/` and run against real deployed dev infrastructure. They do not use mocks.
-- The frontend, real dev E2E runner, and future ECS agents call the same `/v1` REST API. Frontend-specific behavior is limited to Cognito browser login, CORS, polling, optimistic updates, and presentation.
+- The frontend, real dev E2E runner, and future agent clients call the same `/v1` REST API. Frontend-specific behavior is limited to Cognito browser login, CORS, polling, optimistic updates, and presentation.
 - Dev and prod can both be seeded with the following projects: `2ndbrain`, `2ndbrain-dev`, `software-factory-dev`, `agent-workflow-queue`, and `example`.
-- Cognito client-credentials support is built now for non-interactive E2E tests and future machine clients. ECS-specific secret delivery is post-MVP; the tracker backend itself does not require containers.
+- Cognito client-credentials support is built now for non-interactive E2E tests and future machine clients. Deployed-agent secret delivery is post-MVP; the tracker backend itself does not require agent runtimes.
 
 ## Steps
 
@@ -37,7 +37,7 @@
 ## Definition of Done for the Build Plan
 
 - All P0 agent lifecycle stories have real `@test-env` coverage against API Gateway, Lambda, Cognito, and DynamoDB.
-- The frontend and automated clients use the same documented REST endpoints; ECS agents can reuse the machine-auth flow after MVP.
+- The frontend and automated clients use the same documented REST endpoints; future agent clients can reuse the machine-auth flow after MVP.
 - Dev and prod deployments are repeatable from local `deploy.sh` commands.
 - The five seed projects can be created without GitHub, `bd`, or manual database edits.
 - The production domain and Cognito callback configuration are documented and verified.
@@ -46,4 +46,4 @@
 
 | Step ID | Title | Depends on | What gets built | Definition of Done |
 |---|---|---|---|---|
-| P-001 | Add ECS machine secret delivery | B-011 | Secrets Manager secret, ECS task-role policy, runtime token-client configuration, and optional per-agent client attribution | A real ECS task obtains a short-lived Cognito token without interactive login and calls the same `/v1` endpoints; no ECS secret is baked into the image |
+| P-001 | Add deployed-agent secret delivery | B-011 | Secrets Manager secret, runtime identity policy, token-client configuration, and optional per-agent client attribution | A deployed agent obtains a short-lived Cognito token without interactive login and calls the same `/v1` endpoints; no credential is baked into the image |

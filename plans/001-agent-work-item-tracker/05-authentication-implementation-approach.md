@@ -1,15 +1,15 @@
-# Authentication Implementation Approach: Automated Tests and ECS Agents
+# Authentication Implementation Approach: Automated Tests and Agent Clients
 
 ## Decision
 
-Use Cognito OAuth 2.0 `client_credentials` for non-interactive automated tests in MVP and for ECS-hosted coding agents after MVP.
+Use Cognito OAuth 2.0 `client_credentials` for non-interactive automated tests in MVP and for future agent clients after MVP.
 
-The dev E2E runner reads the dedicated test app-client credentials from `.env.test` or CI secret storage. ECS-specific delivery through Secrets Manager and the ECS task role is deferred until containers are part of the deployed agent workflow.
+The dev E2E runner reads the dedicated test app-client credentials from `.env.test` or CI secret storage. Deployed-agent delivery through Secrets Manager and a runtime identity is deferred until after MVP.
 
 ## Request Flow
 
 ```text
-Dev E2E runner or future ECS agent
+Dev E2E runner or future agent client
   │  1. Read Cognito client ID and secret
   │     from .env.test/CI now, or Secrets Manager later
   ▼
@@ -17,7 +17,7 @@ Cognito token endpoint
   │  2. Validate client ID and secret
   │  3. Return short-lived access token
   ▼
-Dev E2E runner or future ECS agent
+Dev E2E runner or future agent client
   │  4. Cache token in memory until near expiry
   │  5. Call REST API with Authorization: Bearer <access-token>
   ▼
@@ -38,12 +38,12 @@ The frontend uses the same REST endpoints with an owner Cognito JWT. No separate
 - Refresh the access token before expiry and retry one time after a 401 response.
 - Use this client-credentials flow for real Behave E2E tests against the deployed dev stack.
 
-## Post-MVP ECS Credential Handling
+## Post-MVP Agent Credential Handling
 
 - Store the Cognito app client secret in AWS Secrets Manager.
-- Give each ECS task definition an IAM task role that can read only the required secret and decrypt it if a customer-managed KMS key is used.
-- Retrieve the secret at task startup through ECS secret injection or the AWS SDK.
-- Keep the container image free of client secrets, AWS credentials, and access tokens.
+- Give each deployed agent runtime an identity that can read only the required secret and decrypt it if a customer-managed KMS key is used.
+- Retrieve the secret at startup through the runtime’s secret-injection mechanism or AWS SDK.
+- Keep the agent runtime free of client secrets, AWS credentials, and access tokens in its image.
 - Rotate the client secret without rebuilding the image.
 
 ## Cognito Configuration
@@ -58,7 +58,7 @@ The frontend uses the same REST endpoints with an owner Cognito JWT. No separate
 ## API Authorization
 
 - Human web requests use Cognito user authentication and owner JWTs.
-- Automated test and future ECS requests use Cognito access tokens issued through `client_credentials`.
+- Automated test and future agent requests use Cognito access tokens issued through `client_credentials`.
 - API Gateway HTTP API validates the token before invoking the Work Item Lambda.
 - The application enforces scope rules:
   - `agent:read` permits reading projects and work items.
@@ -85,4 +85,4 @@ The frontend uses the same REST endpoints with an owner Cognito JWT. No separate
 - An expired or invalid token receives HTTP `401`.
 - The client secret is absent from source control, frontend assets, and test reports.
 - Token values do not appear in application or test logs.
-- After MVP, an ECS task can use the same flow with Secrets Manager/task-role delivery.
+- After MVP, a deployed agent can use the same flow with Secrets Manager/runtime-identity delivery.

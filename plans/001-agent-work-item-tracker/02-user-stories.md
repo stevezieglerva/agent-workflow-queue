@@ -3,7 +3,7 @@
 ## US-001 — Agent Authenticates and Reads Work
 **As a** coding agent or personal AI assistant
 **I want** to authenticate through the Cognito OAuth 2.0 `client_credentials` flow and read project work items
-**So that** automated tests and future agent containers can operate without browser automation or human login
+**So that** automated tests and future agent clients can operate without browser automation or human login
 
 **Priority:** P0
 **Acceptance Criteria:**
@@ -80,11 +80,11 @@
 ## US-007 — Human Provisions Agent Access
 **As a** project owner
 **I want** to manage the Cognito app client and agent secret lifecycle
-**So that** automated tests and future ECS agents can authenticate without interactive login
+**So that** automated tests and future agent clients can authenticate without interactive login
 
 **Priority:** P1
 **Acceptance Criteria:**
 - The deployment creates or documents the Cognito resource server scopes and client-credentials app client.
 - The dev test client secret is loaded from `.env.test` or CI secret storage and is not committed to the repository.
 - Rotating or revoking the client secret prevents future token acquisition without changing the test code.
-- Post-MVP ECS deployment stores the same credential in AWS Secrets Manager and reads it through the ECS task role.
+- Post-MVP deployed-agent runtime stores the same credential in AWS Secrets Manager and reads it through its runtime identity.
